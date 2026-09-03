@@ -6,12 +6,16 @@ import prisma from '../config/prisma.js';
  */
 export const getAllProducts = async (req, res, next) => {
   try {
-    const { categoryId, minPrice, maxPrice, inStock } = req.query;
+    const { categoryId, brandId, minPrice, maxPrice, inStock } = req.query;
 
     const where = {};
 
     if (categoryId !== undefined) {
       where.categoryId = Number(categoryId);
+    }
+
+    if (brandId !== undefined) {
+      where.brandId = Number(brandId);
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -80,7 +84,7 @@ export const getProductById = async (req, res, next) => {
  */
 export const createProduct = async (req, res, next) => {
   try {
-    const { name, description, price, stock, sku, isAvailable, categoryId } = req.body;
+    const { name, description, price, stock, sku, isAvailable, categoryId, brandId } = req.body;
 
     // 1. Verificar si la categoría existe antes de asociarla
     const categoryExists = await prisma.category.findUnique({
@@ -93,6 +97,13 @@ export const createProduct = async (req, res, next) => {
       });
     }
 
+    if (brandId !== undefined) {
+      const brandExists = await prisma.brand.findUnique({ where: { id: brandId } });
+      if (!brandExists) {
+        return res.status(404).json({ error: `La marca con ID ${brandId} no existe.` });
+      }
+    }
+
     // 2. Crear el producto
     const newProduct = await prisma.product.create({
       data: {
@@ -102,7 +113,8 @@ export const createProduct = async (req, res, next) => {
         stock,
         sku,
         isAvailable: isAvailable ?? true,
-        categoryId
+        categoryId,
+        brandId
       },
       include: {
         category: true
@@ -135,6 +147,15 @@ export const updateProduct = async (req, res, next) => {
       if (!categoryExists) {
         return res.status(404).json({
           error: `La categoría con ID ${updateData.categoryId} no existe.`
+        });
+      }
+    }
+
+    if (updateData.brandId !== undefined) {
+      const brandExists = await prisma.brand.findUnique({ where: { id: updateData.brandId } });
+      if (!brandExists) {
+        return res.status(404).json({
+          error: `La marca con ID ${updateData.brandId} no existe.`
         });
       }
     }
